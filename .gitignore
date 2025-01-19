@@ -1,0 +1,16 @@
+*.pyc
+*.sqlite3
+*.DS_Store
+*local_settings.py
+*.log
+.env
+venv/
+
+media/
+./static/
+*__pycache__/
+*celerybeat-schedule.db
+
+/.idea/
+
+filepond-temp-uploads
