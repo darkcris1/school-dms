@@ -9,9 +9,12 @@
 ## Backend 
 
 - Copy the **.env.example** contents and paste it in **.env**
+- Make sure the database configuration is **correct**
 
 ### Installation
 ```bash
+python3 -m venv venv
+source venv/bin/activate # or in windows venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
