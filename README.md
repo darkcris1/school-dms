@@ -35,5 +35,6 @@ python3 manage.py createsuperuser
 ## Frontend Setup
 ```bash
 cd frontend
+npm i
 npm run dev
 ```
