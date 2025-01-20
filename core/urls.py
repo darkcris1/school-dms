@@ -19,7 +19,10 @@ from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
 from django.conf.urls import include
+from django.shortcuts import render
 
+def upload_page(request):
+    return render(request, 'uploads/index.html')
 
 app_name = 'my_app'
 
@@ -29,8 +32,9 @@ urlpatterns = [
         path('auth/', include(('dj_rest_auth.urls', 'auth'), namespace='auth')),
         path('users/', include('users.urls', namespace='users')),
         path('files/', include('files.urls', namespace='files')),
+        path('fp/', include('django_drf_filepond.urls')),
     ])),
-    path('fp/', include('django_drf_filepond.urls')),
+    path('upload/', upload_page),
 ]
 
 

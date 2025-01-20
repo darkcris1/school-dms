@@ -4,8 +4,12 @@ import "./index.css";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import App from "./App.tsx";
 import Login from "./pages/Login.tsx";
-import FileManager from "./pages/dashboard/file-manager/FileManager.tsx";
+import FileManager from "./pages/dashboard/FileManager.tsx";
 import DashboardLayout from "./pages/dashboard/layout.tsx";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+// Create a client
+const queryClient = new QueryClient();
 
 // Define the routes using createBrowserRouter
 const router = createBrowserRouter([
@@ -33,6 +37,8 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById("root")!).render(
     <StrictMode>
-        <RouterProvider router={router} />
+        <QueryClientProvider client={queryClient}>
+            <RouterProvider router={router} />
+        </QueryClientProvider>
     </StrictMode>
 );

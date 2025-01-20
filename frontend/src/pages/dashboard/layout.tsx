@@ -1,20 +1,17 @@
-import React from 'react'
-import { Outlet } from 'react-router-dom'
+import Header from "@/components/Header";
+import Sidebar from "@/components/Sidebar";
+import React from "react";
+import { Outlet } from "react-router-dom";
 
 export default function DashboardLayout() {
-  return (
-    <>
-        <header>
-            <nav>
-                <ul>
-                    <li>Home</li>
-                    <li>Profile</li>
-                    <li>Logout</li>
-                </ul>
-            </nav>
-        </header>
-
-        <Outlet />
-    </>
-  )
+    return (
+        <>
+            <div className="min-h-screen bg-background container mx-auto">
+                <Header />
+                  <main className="flex-1 p-6">
+                      <Outlet />
+                  </main>
+            </div>
+        </>
+    );
 }
