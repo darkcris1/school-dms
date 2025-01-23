@@ -1,4 +1,5 @@
-import dayjs from "dayjs";
+import { AxiosError } from "axios";
+import FileSaver from "file-saver";
 
 export const objIsEmpty = (obj: Object) => {
   return Object.keys(obj).length === 0;
@@ -112,11 +113,21 @@ export function isString(str: any){
     return typeof str === 'string' || str instanceof String;
 }
 
-export function timeFormat(str: any){
-  if (isString(str)) {
-    console.log('1/1/1991 '+ str)
-    return dayjs('1/1/1991 '+ str).format('H:mm')
+
+
+export const extractServerError = (error: AxiosError) => {
+  // @ts-ignore
+  let detailError = error.response?.data?.detail;
+  if (detailError) {
+    return detailError[0]
   }
 
-  return dayjs(str).format('H:mm')
+  // @ts-ignore
+  detailError = error.response?.data?.non_field_errors;
+
+  return detailError[0];
+}
+
+export function downloadFile(url: string, filename = 'download') {
+  FileSaver.saveAs(url, filename);
 }

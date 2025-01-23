@@ -27,3 +27,6 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ("first_name", "last_name")
+
+    def display_name(self):
+        return f"{self.first_name} {self.last_name}"

@@ -204,7 +204,7 @@ AUTH_USER_MODEL = "users.User"
 
 DJANGO_DRF_FILEPOND_UPLOAD_TMP = os.path.join(BASE_DIR, 'filepond-temp-uploads')
 
-DJANGO_DRF_FILEPOND_FILE_STORE_PATH = os.path.join(BASE_DIR, 'media/file-uploads/')
+DJANGO_DRF_FILEPOND_FILE_STORE_PATH = os.path.join(BASE_DIR, 'media')
 
 
 # CORS Headers settings

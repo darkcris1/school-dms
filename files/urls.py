@@ -5,11 +5,11 @@ app_name = 'files'
 
 urlpatterns = [
     path('folders/', include([
-        path('', FileView.as_view({
+        path('', FolderView.as_view({
             'post': 'create',
             'get': 'list',
         }), name='folders'),
-        path('<uuid:uid>/', FileView.as_view({
+        path('<uuid:uid>/', FolderView.as_view({
             'put': 'update',
             'get': 'retrieve',
         }), name='folders-detail'),

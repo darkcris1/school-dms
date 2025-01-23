@@ -1,148 +1,552 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { Folder, File, MoreVertical } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { FilePond, registerPlugin } from "react-filepond"
-import "filepond/dist/filepond.min.css"
-import FilePondPluginImageExifOrientation from "filepond-plugin-image-exif-orientation"
-import FilePondPluginImagePreview from "filepond-plugin-image-preview"
-import "filepond-plugin-image-preview/dist/filepond-plugin-image-preview.css"
-import { urlEncode } from "@/commons/utils/http.util"
-import { API_URL } from "@/commons/constants/api.constant"
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import { Folder, File, MoreVertical, Plus, Trash2, Info, ArrowLeft } from "lucide-react";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+    DialogFooter,
+    DialogDescription,
+} from "@/components/ui/dialog";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { FilePond, registerPlugin } from "react-filepond";
+import "filepond/dist/filepond.min.css";
+import FilePondPluginImageExifOrientation from "filepond-plugin-image-exif-orientation";
+import FilePondPluginImagePreview from "filepond-plugin-image-preview";
+import "filepond-plugin-image-preview/dist/filepond-plugin-image-preview.css";
+import { urlEncode } from "@/commons/utils/http.util";
+import { API_URL } from "@/commons/constants/api.constant";
+import {
+    createFolder,
+    getFiles,
+    getFolder,
+    getFolders,
+    uploadFiles,
+} from "@/commons/services/files.service";
+import { Label } from "@/components/ui/label";
+import { toast } from "@/hooks/use-toast";
+import { useSearchParams } from "react-router-dom";
+import { FileType, FolderType } from "@/commons/models/files.model";
+import { format as formatDate, milliseconds } from "date-fns";
+import { downloadFile } from "@/commons/utils/helpers.util";
 
-registerPlugin(FilePondPluginImageExifOrientation, FilePondPluginImagePreview)
+registerPlugin(FilePondPluginImageExifOrientation, FilePondPluginImagePreview);
 
 type Item = {
-  id: string
-  name: string
-  type: "folder" | "file"
-  size?: string
-  modified: string
-  items?: Item[]
-}
+    id: string;
+    name: string;
+    type: any;
+    size?: string;
+    modified: string;
+    created: string;
+    createdBy: string;
+    items?: Item[];
+};
 
 export default function DashboardPage() {
-  const [items, setItems] = useState<Item[]>([
-    { id: "1", name: "Documents", type: "folder", modified: "2023-04-20", items: [
-      { id: "5", name: "document1.docx", type: "file", size: "1.2 MB", modified: "2023-04-21" }
-    ]},
-    { id: "2", name: "Images", type: "folder", modified: "2023-04-19", items: [] },
-    { id: "3", name: "report.pdf", type: "file", size: "2.5 MB", modified: "2023-04-18" },
-    { id: "4", name: "presentation.pptx", type: "file", size: "5.1 MB", modified: "2023-04-17" },
-  ])
+    const [searchParams, setSearchParams] = useSearchParams();
 
-  const [newFolderName, setNewFolderName] = useState("")
+    const folderUUID = searchParams.get("folder");
 
-  const handleCreateFolder = () => {
-    if (newFolderName) {
-      setItems([
-        ...items,
+    const { data: foldersData , refetch: refetchFolders } = useQuery({
+        queryKey: ["folders", folderUUID],
+        refetchOnWindowFocus: false,
+        queryFn: () =>
+            getFolders({ folder: folderUUID }).then((res) => res.data),
+    });
+
+    const { data: fileData, refetch: refetchFiles } = useQuery({
+        queryKey: ["files", folderUUID],
+        refetchOnWindowFocus: false,
+        queryFn: () => getFiles({ folder: folderUUID }).then((res) => res.data),
+    });
+    const { data: folderData, refetch: refetchFolder } = useQuery({
+        queryKey: ["folder-detail"],
+        refetchOnWindowFocus: false,
+        queryFn: () => getFolder(folderUUID).then((res) => res.data),
+        enabled: !!folderUUID,
+    });
+
+    const [items, setItems] = useState<Item[]>([
         {
-          id: Date.now().toString(),
-          name: newFolderName,
-          type: "folder",
-          modified: new Date().toISOString().split("T")[0],
-          items: [],
+            id: "1",
+            name: "Documents",
+            type: "folder",
+            modified: "2023-04-20",
+            created: "2023-04-15",
+            createdBy: "John Doe",
+            items: [
+                {
+                    id: "5",
+                    name: "document1.docx",
+                    type: "file",
+                    size: "1.2 MB",
+                    modified: "2023-04-21",
+                    created: "2023-04-20",
+                    createdBy: "Jane Smith",
+                },
+            ],
         },
-      ])
-      setNewFolderName("")
+        {
+            id: "2",
+            name: "Images",
+            type: "folder",
+            modified: "2023-04-19",
+            created: "2023-04-18",
+            createdBy: "Alice Johnson",
+            items: [],
+        },
+        {
+            id: "3",
+            name: "report.pdf",
+            type: "file",
+            size: "2.5 MB",
+            modified: "2023-04-18",
+            created: "2023-04-17",
+            createdBy: "Bob Williams",
+        },
+        {
+            id: "4",
+            name: "presentation.pptx",
+            type: "file",
+            size: "5.1 MB",
+            modified: "2023-04-17",
+            created: "2023-04-16",
+            createdBy: "Charlie Brown",
+        },
+    ]);
+
+    const [newFolderName, setNewFolderName] = useState("");
+    const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<Item | null>(null);
+    const [itemToView, setItemToView] = useState<Item | null>(null);
+
+    const queryClient = useQueryClient();
+
+    const createFolderMutation = useMutation({
+        mutationFn: createFolder,
+        onSuccess: (data) => {
+            setNewFolderName("")
+            setIsCreateFolderOpen(false)
+            toast({
+                title: "Folder created",
+                description: `Folder "${data.data.name}" has been created successfully.`,
+            });
+            queryClient.invalidateQueries({ queryKey: ["folders"] });
+        },
+        onError: (error) => {
+            console.error("Failed to create folder:", error);
+            toast({
+                title: "Error",
+                description: "Failed to create folder. Please try again.",
+                variant: "destructive",
+            });
+        },
+    });
+
+    const handleCreateFolder = () => {
+        if (newFolderName.trim()) {
+            createFolderMutation.mutate({ name: newFolderName.trim(), parent: folderData?.id });
+        } else {
+            toast({
+                title: "Error",
+                description: "Folder name is required.",
+                variant: "destructive",
+            });
+        }
+    };
+
+    const handleDelete = (item: Item) => {
+        setItemToDelete(item);
+    };
+    const handleDeleteFolder = (item: FolderType) => {
+        // setItemToDelete(item);
+    };
+
+    const handleDeleteFile = (item: FileType) => {};
+
+    const confirmDelete = () => {
+        if (itemToDelete) {
+            setItems(items.filter((item) => item.id !== itemToDelete.id));
+            setItemToDelete(null);
+        }
+    };
+
+    const handleViewFolder = (item: FolderType) => {
+        setItemToView({
+            created: formatDate(item.created_at, 'MMM dd yyyy HH:mm'),
+            createdBy: item.user_name,
+            id: item.uid,
+            modified: formatDate(item.updated_at, 'MMM dd yyyy HH:mm'),
+            name: item.name,
+            type: "f",
+        });
+    };
+    const handleViewFile = (item: FileType) => {
+        setItemToView({
+            created: formatDate(item.created_at, 'MMM dd yyyy HH:mm'),
+            createdBy: item.user_name,
+            id: item.uid,
+            modified: formatDate(item.updated_at, 'MMM dd yyyy HH:mm'),
+            size: item.filesize,
+            name: item.filename,
+            type: "a",
+        });
+    };
+
+    const calculateFolderSize = (folder: Item): string => {
+        let totalSize = 0;
+        const sizes =
+            folder.items?.map((item) => {
+                if (item.type === "file") {
+                    return Number.parseInt(
+                        item.size?.replace(" MB", "") || "0"
+                    );
+                } else if (item.type === "folder") {
+                    return Number.parseInt(
+                        calculateFolderSize(item).replace(" MB", "")
+                    );
+                }
+                return 0;
+            }) || [];
+        totalSize = sizes.reduce((a, b) => a + b, 0);
+        return `${totalSize} MB`;
+    };
+
+    function refetchByFolder(folder: string) {
+      if (!folder) {
+        searchParams.delete('folder')
+        setSearchParams(searchParams)
+        queryClient.setQueryData(['folder-detail'], null)
+      } else {
+        setSearchParams({ folder });
+      }
+      setTimeout(()=>{
+        refetchFolders()
+        refetchFiles()
+        refetchFolder()
+      }, 10)
     }
-  }
 
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold">Dashboard</h2>
-        <div className="flex space-x-2">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button>Upload File</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Upload File</DialogTitle>
-              </DialogHeader>
-              <FilePond
-                allowMultiple={true}
-                maxFiles={3}
-                chunkUploads={true}
-                chunkSize={50000}
-                server={{
-                  url: urlEncode([API_URL, 'fp']),
-                  process: 'process/',
-                  patch: 'patch/',
-                  revert: 'revert/',
-                  fetch: 'fetch/?target=',
-                  load: 'load/?target=',
-                }}
-                name="filepond"
-                labelIdle='Drag & Drop your files or <span class="filepond--label-action">Browse</span>'
-              />
-            </DialogContent>
-          </Dialog>
-          <div className="flex space-x-2">
-            <Input
-              placeholder="New folder name"
-              value={newFolderName}
-              onChange={(e) => setNewFolderName(e.target.value)}
-            />
-            <Button onClick={handleCreateFolder}>Create Folder</Button>
-          </div>
-        </div>
-      </div>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Size</TableHead>
-            <TableHead>Modified</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {items.map((item) => (
-            <TableRow key={item.id}>
-              <TableCell className="font-medium">
-                {item.type === "folder" ? (
-                  <div className="flex items-center">
-                    <Folder className="inline mr-2" />
-                    {item.name}
-                    {item.items && item.items.length > 0 && (
-                      <div className="ml-2 w-2 h-2 rounded-full bg-red-500" />
+    return (
+        <div>
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold">
+                  { folderData?.name ? (folderData?.name + '/')  : "/" }
+                </h2>
+                <div className="flex space-x-2">
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <Button>Upload File</Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Upload File</DialogTitle>
+                            </DialogHeader>
+                            <FilePond
+                                allowMultiple={true}
+                                maxFiles={3}
+                                chunkUploads={true}
+                                chunkSize={50000}
+                                server={{
+                                    url: urlEncode([API_URL, "fp"]),
+                                    process: "process/",
+                                    patch: "patch/",
+                                    revert: "revert/",
+                                    fetch: "fetch/?target=",
+                                    load: "load/?target=",
+                                }}
+                                onprocessfile={(error, file) => {
+                                    if (error) {
+                                        console.error("Failed to upload file:", error);
+                                        toast({
+                                            title: "Error",
+                                            description: "Failed to upload file. Please try again.",
+                                            variant: "destructive",
+                                        });
+                                    } else {
+                                        uploadFiles({
+                                            folder: folderData?.id,
+                                            upload_id: file.serverId
+                                        }).then((res)=>{
+                                            queryClient.invalidateQueries({ queryKey: ["files"] });
+                                            toast({
+                                                title: "File uploaded",
+                                                description: `File "${file.filename}" has been uploaded successfully.`,
+                                            })
+                                        })
+                                    }
+                                }}
+                                name="filepond"
+                                labelIdle='Drag & Drop your files or <span class="filepond--label-action">Browse</span>'
+                            />
+                        </DialogContent>
+                    </Dialog>
+                    <Dialog
+                        open={isCreateFolderOpen}
+                        onOpenChange={setIsCreateFolderOpen}
+                    >
+                        <DialogTrigger asChild>
+                            <Button>
+                                <Plus className="mr-2 h-4 w-4" /> Create Folder
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Create New Folder</DialogTitle>
+                            </DialogHeader>
+                            <Input
+                                placeholder="Folder name"
+                                value={newFolderName}
+                                onChange={(e) =>
+                                    setNewFolderName(e.target.value)
+                                }
+                            />
+                            <DialogFooter>
+                                <Button
+                                    onClick={handleCreateFolder}
+                                    disabled={
+                                        createFolderMutation.isPending ||
+                                        !newFolderName.trim()
+                                    }
+                                >
+                                    {createFolderMutation.isPending
+                                        ? "Creating..."
+                                        : "Create"}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                </div>
+            </div>
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Size</TableHead>
+                        <TableHead>Modified</TableHead>
+                        <TableHead>Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                {folderData && (
+                        <TableRow
+                        onClick={() => {
+                            if (folderData?.parent_uid) {
+                              refetchByFolder(folderData.parent_uid)
+                            } else {
+                              refetchByFolder('')
+                            }
+                          }}
+                            >
+                            <TableCell colSpan={4}>
+                              <div className="text-xl">
+                                ../
+                              </div>
+                            </TableCell>
+                        </TableRow>
                     )}
-                  </div>
-                ) : (
-                  <div className="flex items-center">
-                    <File className="inline mr-2" />
-                    {item.name}
-                  </div>
-                )}
-              </TableCell>
-              <TableCell>{item.type}</TableCell>
-              <TableCell>{item.size || "-"}</TableCell>
-              <TableCell>{item.modified}</TableCell>
-              <TableCell>
-                <Button variant="ghost" size="icon">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  )
-}
+                    {(foldersData || []).map((item) => (
+                        <TableRow 
+                            className="cursor-pointer"
+                            
+                          key={item.id}>
+                            <TableCell 
+                            onClick={() => {
+                              setSearchParams({ folder: item.uid });
+                              setTimeout(()=>{
+                                refetchByFolder(item.uid)
+                              })
+                            }}
+                              className="font-medium">
+                                <div className="flex items-center">
+                                    <Folder className="inline mr-2" />
+                                    {item.name}
+                                    {item.files_total + item.folders_total >
+                                        0 && (
+                                        <div className="ml-2 w-2 h-2 rounded-full bg-red-500" />
+                                    )}
+                                </div>
+                            </TableCell>
+                            <TableCell>-</TableCell>
+                            <TableCell>
+                                {formatDate(item.created_at, "MMM dd, yyyy")}
+                            </TableCell>
+                            <TableCell>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon">
+                                            <MoreVertical className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent>
+                                        <DropdownMenuItem
+                                            onSelect={() =>
+                                                handleViewFolder(item)
+                                            }
+                                        >
+                                            <Info className="mr-2 h-4 w-4" />
+                                            View Details
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            onSelect={() =>
+                                                handleDeleteFolder(item)
+                                            }
+                                        >
+                                            <Trash2 className="mr-2 h-4 w-4" />
+                                            Delete
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </TableCell>
+                        </TableRow>
+                    ))}
 
+                    {(fileData || []).map((item) => (
+                        <TableRow 
+                            key={item.id}>
+                            <TableCell 
+                                onClick={()=> downloadFile(item.file, item.filename)}
+                                className="font-medium">
+                                <div className="flex items-center">
+                                    <File className="inline mr-2" />
+                                    {item.filename}
+                                </div>
+                            </TableCell>
+                            <TableCell>{item.filesize || "-"}</TableCell>
+                            <TableCell>
+                                {formatDate(item.updated_at, "MMM dd, yyyy")}
+                            </TableCell>
+                            <TableCell>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon">
+                                            <MoreVertical className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent>
+                                        <DropdownMenuItem
+                                            onSelect={() =>
+                                                handleViewFile(item)
+                                            }
+                                        >
+                                            <Info className="mr-2 h-4 w-4" />
+                                            View Details
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            onSelect={() =>
+                                                handleDeleteFile(item)
+                                            }
+                                        >
+                                            <Trash2 className="mr-2 h-4 w-4" />
+                                            Delete
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+
+                    {fileData?.length === 0 && foldersData?.length === 0 && (
+                        <TableRow>
+                            <TableCell colSpan={4} className="text-center">
+                              <div className="my-4">
+                                No files or folders found.
+                              </div>
+                            </TableCell>
+                        </TableRow>
+                    )}
+                    
+                </TableBody>
+            </Table>
+            <Dialog
+                open={!!itemToDelete}
+                onOpenChange={() => setItemToDelete(null)}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Confirm Deletion</DialogTitle>
+                    </DialogHeader>
+                    <DialogDescription>
+                        {itemToDelete?.type === "folder"
+                            ? `Are you sure you want to delete the folder "${itemToDelete.name}" and all its contents?`
+                            : `Are you sure you want to delete the file "${itemToDelete?.name}"?`}
+                    </DialogDescription>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setItemToDelete(null)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={confirmDelete}>
+                            Delete
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            <Dialog
+                open={!!itemToView}
+                onOpenChange={() => setItemToView(null)}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{itemToView?.name} Details</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label className="text-right">Size</Label>
+                            <div className="col-span-3">
+                                {itemToView?.type === "folder"
+                                    ? calculateFolderSize(itemToView)
+                                    : itemToView?.size || "-"}
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label className="text-right">Created</Label>
+                            <div className="col-span-3">
+                                {itemToView?.created}
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label className="text-right">Modified</Label>
+                            <div className="col-span-3">
+                                {itemToView?.modified}
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label className="text-right">Created By</Label>
+                            <div className="col-span-3">
+                                {itemToView?.createdBy}
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button onClick={() => setItemToView(null)}>
+                            Close
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
+}

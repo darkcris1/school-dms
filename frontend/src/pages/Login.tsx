@@ -12,6 +12,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast"
 import { Loader2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { extractServerError } from '@/commons/utils/helpers.util'
+import { AxiosError } from 'axios'
 
 // Define the form schema
 const formSchema = z.object({
@@ -41,13 +43,14 @@ export default function LoginPage() {
         description: "You have been successfully logged in.",
       })
       // Here you can handle successful login, e.g., redirect to dashboard
-      setToken(res.data.token)
+      setToken(res.data.key)
       navigate("/dashboard")
     },
-    onError: (error) => {
+    onError: (error: AxiosError) => {
+      const message = extractServerError(error)
       toast({
         title: "Login Failed",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
+        description: message ? message : "An unknown error occurred",
         variant: "destructive",
       })
     },

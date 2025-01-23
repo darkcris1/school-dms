@@ -14,7 +14,7 @@ export default function Header() {
   return (
     <header className="bg-background border-b">
       <div className="container flex h-16 items-center justify-between">
-        <h1 className="text-2xl font-bold">File Dashboard</h1>
+        <h1 className="text-2xl font-bold">School DMS</h1>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">

@@ -7,8 +7,7 @@ import { User } from "../models/users.model";
 export const currentUser = atom<User | null>(null)
 
 export function login(data: any) {
-    return axios.post<{ token: string }>(urlEncode([API_URL, 'auth', 'login']), data).then((res) => {
-        res.data.token
+    return axios.post<{ key: string }>(urlEncode([API_URL, 'auth', 'login']), data).then((res) => {
         return res
     })
 }
@@ -27,6 +26,10 @@ export function setToken(token: string) {
 
 export function isLoggedIn() {
     return !!localStorage.getItem(TOKEN_KEY)
+}
+
+export function getToken() {
+    return localStorage.getItem(TOKEN_KEY)
 }
 
 export function removeToken() {

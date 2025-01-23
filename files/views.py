@@ -1,26 +1,35 @@
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 from rest_framework.response import Response
+from utils.helpers import is_valid_uuid
 from utils.views import APIViewset
 from .serializers import FolderSerializer, FileSerializer
 from rest_framework import status
+from .models import Folder
 
 
 class FolderView(APIViewset):
     serializer_class = FolderSerializer
     search_fields = ("name",)
+    pagination_class = None
 
     def get_queryset(self):
-        return super().get_queryset()\
+        folder = self.request.query_params.get('folder')
+        qs = super().get_queryset()\
             .select_related('parent')\
             .prefetch_related('children', 'files', 'user')
 
+        if folder and is_valid_uuid(folder):
+            qs = qs.filter(parent__uid=folder)
+
+        return qs
+
     @transaction.atomic
     def create(self, request, *args, **kwargs):
-        data = self.get_request_data(user=request.user)
+        data = self.get_request_data(user=request.user.pk)
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
+        serializer.save()
         return Response(serializer.data, status=201)
 
     @transaction.atomic
@@ -37,10 +46,18 @@ class FolderView(APIViewset):
 class FileView(APIViewset):
     serializer_class = FileSerializer
     search_fields = ("name",)
+    pagination_class = None
 
     def get_queryset(self):
-        return self.model.objects\
+        folder = self.request.query_params.get('folder')
+        qs = self.model.objects\
             .select_related('folder', 'stored_file', 'user')
+
+        if folder and is_valid_uuid(folder):
+            qs = qs.filter(folder__uid=folder)
+
+        return qs
+
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):

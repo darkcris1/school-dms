@@ -30,9 +30,10 @@ class File(models.Model):
     folder = models.ForeignKey(
         Folder, on_delete=models.CASCADE, related_name="files", null=True, blank=True
     )
+    name = models.CharField(max_length=255, null=True)
     stored_file = models.OneToOneField(
         StoredUpload, on_delete=models.CASCADE, related_name="fp_file"
     )
 
-    def __str__(self):
-        return f"File in folder: {self.folder.name}"
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
