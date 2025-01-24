@@ -424,7 +424,7 @@ export default function DashboardPage() {
               <TableCell onClick={() => downloadFile(item.file, item.filename)} className="font-medium">
                 <div className="flex items-center">
                   <File className="inline mr-2" />
-                  <p className="truncate">
+                  <p className="truncate max-w-[192px]">
                       {item.filename}
                   </p>
                 </div>
