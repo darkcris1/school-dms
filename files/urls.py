@@ -12,6 +12,7 @@ urlpatterns = [
         path('<uuid:uid>/', FolderView.as_view({
             'put': 'update',
             'get': 'retrieve',
+            'delete': 'destroy',
         }), name='folders-detail'),
     ])),
 
@@ -23,6 +24,7 @@ urlpatterns = [
         path('<uuid:uid>/', FileView.as_view({
             'put': 'update',
             'get': 'retrieve',
+            'delete': 'destroy',
         }), name='files-detail'),
     ])),
 ]
