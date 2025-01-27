@@ -39,6 +39,8 @@ import { useSearchParams } from "react-router-dom"
 import type { FileType, FolderType } from "@/commons/models/files.model"
 import { format as formatDate, milliseconds } from "date-fns"
 import { downloadFile } from "@/commons/utils/helpers.util"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 
 registerPlugin(FilePondPluginImageExifOrientation, FilePondPluginImagePreview)
 
@@ -83,6 +85,11 @@ export default function DashboardPage() {
   const [folderToEdit, setFolderToEdit] = useState<FolderType | null>(null)
   const [isEditFolderOpen, setIsEditFolderOpen] = useState(false)
   const [editedFolderName, setEditedFolderName] = useState("")
+  const [showFolders, setShowFolders] = useState(true)
+  const [showFiles, setShowFiles] = useState(true)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [sortBy, setSortBy] = useState("name")
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
 
   const queryClient = useQueryClient()
 
@@ -117,7 +124,7 @@ export default function DashboardPage() {
         description: `Folder "${data.data.name}" has been updated successfully.`,
       })
 
-    setIsEditFolderOpen(false)
+      setIsEditFolderOpen(false)
     },
     onError: (error) => {
       console.error("Failed to update folder:", error)
@@ -242,7 +249,7 @@ export default function DashboardPage() {
 
   const handleUpdateFolder = () => {
     if (folderToEdit && editedFolderName.trim() !== folderToEdit.name) {
-      updateFolderMutation.mutate({ uid: folderToEdit.uid, data: { name: editedFolderName.trim()  }})
+      updateFolderMutation.mutate({ uid: folderToEdit.uid, data: { name: editedFolderName.trim() } })
     }
   }
 
@@ -265,6 +272,29 @@ export default function DashboardPage() {
       refetchFiles()
       refetchFolder()
     }, 10)
+  }
+
+  const toggleItemSelection = (id: string) => {
+    setSelectedItems((prev) => {
+      const newSet = new Set(prev)
+      if (newSet.has(id)) {
+        newSet.delete(id)
+      } else {
+        newSet.add(id)
+      }
+      return newSet
+    })
+  }
+
+  const sortItems = (items: any[]) => {
+    return items.sort((a, b) => {
+      if (sortBy === "name") {
+        return (a.name || a.filename).localeCompare((b.name || b.filename))
+      } else if (sortBy === "created_at") {
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      }
+      return 0
+    })
   }
 
   return (
@@ -345,6 +375,23 @@ export default function DashboardPage() {
           </Dialog>
         </div>
       </div>
+      <div className="flex justify-between items-center mb-4">
+        <Input
+          placeholder="Search files and folders"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-64"
+        />
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="name">Name</SelectItem>
+            <SelectItem value="created_at">Created At</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
       <Table>
         <TableHeader>
           <TableRow>
@@ -366,98 +413,103 @@ export default function DashboardPage() {
               }}
             >
               <TableCell colSpan={4}>
-                <div className="text-xl">../</div>
+                <div className="flex items-center truncate">
+                  <Folder className="inline mr-2" />
+                  <p className="truncate font-bold max-w-[192px]">../</p>
+                </div>
               </TableCell>
             </TableRow>
           )}
-          {(foldersData || []).map((item) => (
-            <TableRow className="cursor-pointer" key={item.id}>
-              <TableCell
-                onClick={() => {
-                  setSearchParams({ folder: item.uid })
-                  setTimeout(() => {
-                    refetchByFolder(item.uid)
-                  })
-                }}
-                className="font-medium"
-              >
-                <div className="flex items-center truncate">
-                  <Folder className="inline mr-2" />
-                  <p className="truncate max-w-[192px]">
-                    {item.name}
-                  </p>
-                  {item.files_total + item.folders_total > 0 && (
-                    <div className="ml-2 w-2 h-2 rounded-full bg-red-500" />
-                  )}
-                </div>
-              </TableCell>
-              <TableCell>-</TableCell>
-              <TableCell>{formatDate(item.created_at, "MMM dd, yyyy")}</TableCell>
-              <TableCell>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem onSelect={() => handleViewFolder(item)}>
-                      <Info className="mr-2 h-4 w-4" />
-                      View Details
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => openEditModal(item)}>
-                      <Edit className="mr-2 h-4 w-4" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => handleDeleteFolder(item)}>
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          ))}
+          {showFolders &&
+            sortItems(foldersData || [])
+              .filter((item) => item.name.toLowerCase().includes(searchTerm.toLowerCase()))
+              .map((item) => (
+                <TableRow className="cursor-pointer" key={item.id}>
+                  <TableCell
+                    onClick={() => {
+                      setSearchParams({ folder: item.uid })
+                      setTimeout(() => {
+                        refetchByFolder(item.uid)
+                      })
+                    }}
+                    className="font-medium"
+                  >
+                    <div className="flex items-center truncate">
+                      <Folder className="inline mr-2" />
+                      <p className="truncate max-w-[192px]">{item.name}</p>
+                      {item.files_total + item.folders_total > 0 && (
+                        <div className="ml-2 w-2 h-2 rounded-full bg-red-500" />
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>-</TableCell>
+                  <TableCell>{formatDate(item.updated_at, "MMM dd, yyyy h:mm a")}</TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onSelect={() => handleViewFolder(item)}>
+                          <Info className="mr-2 h-4 w-4" />
+                          View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => openEditModal(item)}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => handleDeleteFolder(item)}>
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
 
-          {(fileData || []).map((item) => (
-            <TableRow key={item.id}>
-              <TableCell onClick={() => downloadFile(item.file, item.filename)} className="font-medium">
-                <div className="flex items-center">
-                  <File className="inline mr-2" />
-                  <p className="truncate max-w-[192px]">
-                      {item.filename}
-                  </p>
-                </div>
-              </TableCell>
-              <TableCell>{item.filesize || "-"}</TableCell>
-              <TableCell>{formatDate(item.updated_at, "MMM dd, yyyy")}</TableCell>
-              <TableCell>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem onSelect={() => handleViewFile(item)}>
-                      <Info className="mr-2 h-4 w-4" />
-                      View Details
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => downloadFile(item.file, item.filename)}>
-                      <Download className="mr-2 h-4 w-4" />
-                      Download
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => handleDeleteFile(item)}>
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          ))}
+          {showFiles &&
+            sortItems(fileData || [])
+              .filter((item) => item.filename.toLowerCase().includes(searchTerm.toLowerCase()))
+              .map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell onClick={() => downloadFile(item.file, item.filename)} className="font-medium">
+                    <div className="flex items-center">
+                      <File className="inline mr-2" />
+                      <p className="truncate max-w-[192px]">{item.filename}</p>
+                    </div>
+                  </TableCell>
+                  <TableCell>{item.filesize || "-"}</TableCell>
+                  <TableCell>{formatDate(item.updated_at, "MMM dd, yyyy h:mm a")}</TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onSelect={() => handleViewFile(item)}>
+                          <Info className="mr-2 h-4 w-4" />
+                          View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => downloadFile(item.file, item.filename)}>
+                          <Download className="mr-2 h-4 w-4" />
+                          Download
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => handleDeleteFile(item)}>
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
 
-          {fileData?.length === 0 && foldersData?.length === 0 && (
+          {(!showFiles || fileData?.length === 0) && (!showFolders || foldersData?.length === 0) && (
             <TableRow>
               <TableCell colSpan={4} className="text-center">
                 <div className="my-4">No files or folders found.</div>

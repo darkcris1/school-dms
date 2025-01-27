@@ -1,5 +1,3 @@
-import { User } from "./users.model";
-
 export interface FileType {
     id: number
     uid: string

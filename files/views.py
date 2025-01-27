@@ -17,10 +17,13 @@ class FolderView(APIViewset):
         folder = self.request.query_params.get('folder')
         qs = super().get_queryset()\
             .select_related('parent')\
+            .filter(user=self.request.user)\
             .prefetch_related('children', 'files', 'user')
 
         if folder and is_valid_uuid(folder):
             qs = qs.filter(parent__uid=folder)
+        else:
+            qs = qs.filter(parent__isnull=True)
 
         return qs
 
@@ -50,10 +53,13 @@ class FileView(APIViewset):
     def get_queryset(self):
         folder = self.request.query_params.get('folder')
         qs = self.model.objects\
+            .filter(user=self.request.user)\
             .select_related('folder', 'stored_file', 'user')
 
         if folder and is_valid_uuid(folder):
             qs = qs.filter(folder__uid=folder)
+        else:
+            qs = qs.filter(folder__isnull=True)
 
         return qs
 
