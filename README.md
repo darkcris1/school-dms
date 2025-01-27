@@ -1,5 +1,8 @@
 # School DMS
 
+### Documentation
+- https://docs.google.com/document/d/1o0dtyVSvtMUudNOjREJijiwZUnyfK2d76RKxmd_wYnI/edit?usp=sharing
+
 ### Requirements
 - python 3.10.x
 - mysql 8.x
